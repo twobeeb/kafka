@@ -225,29 +225,33 @@ public class MirrorMaker {
     }
 
     private void addHerder(SourceAndTarget sourceAndTarget) {
-        log.info("creating herder for " + sourceAndTarget.toString());
-        Map<String, String> workerProps = config.workerConfig(sourceAndTarget);
-        String advertisedUrl = advertisedBaseUrl + "/" + sourceAndTarget.source();
-        String workerId = sourceAndTarget.toString();
-        Plugins plugins = new Plugins(workerProps);
-        plugins.compareAndSwapWithDelegatingLoader();
-        DistributedConfig distributedConfig = new DistributedConfig(workerProps);
-        String kafkaClusterId = ConnectUtils.lookupKafkaClusterId(distributedConfig);
-        KafkaOffsetBackingStore offsetBackingStore = new KafkaOffsetBackingStore();
-        offsetBackingStore.configure(distributedConfig);
-        Worker worker = new Worker(workerId, time, plugins, distributedConfig, offsetBackingStore, CLIENT_CONFIG_OVERRIDE_POLICY);
-        WorkerConfigTransformer configTransformer = worker.configTransformer();
-        Converter internalValueConverter = worker.getInternalValueConverter();
-        StatusBackingStore statusBackingStore = new KafkaStatusBackingStore(time, internalValueConverter);
-        statusBackingStore.configure(distributedConfig);
-        ConfigBackingStore configBackingStore = new KafkaConfigBackingStore(
-                internalValueConverter,
-                distributedConfig,
-                configTransformer);
-        Herder herder = new DistributedHerder(distributedConfig, time, worker,
-                kafkaClusterId, statusBackingStore, configBackingStore,
-                advertisedUrl, CLIENT_CONFIG_OVERRIDE_POLICY);
-        herders.put(sourceAndTarget, herder);
+        boolean enabled = Boolean.getBoolean(config.stringsWithPrefixStripped(sourceAndTarget.source() + "->" + sourceAndTarget.target() + ".")
+                .get(MirrorConnectorConfig.ENABLED));
+        if (enabled) {
+            log.info("creating herder for " + sourceAndTarget.toString());
+            Map<String, String> workerProps = config.workerConfig(sourceAndTarget);
+            String advertisedUrl = advertisedBaseUrl + "/" + sourceAndTarget.source();
+            String workerId = sourceAndTarget.toString();
+            Plugins plugins = new Plugins(workerProps);
+            plugins.compareAndSwapWithDelegatingLoader();
+            DistributedConfig distributedConfig = new DistributedConfig(workerProps);
+            String kafkaClusterId = ConnectUtils.lookupKafkaClusterId(distributedConfig);
+            KafkaOffsetBackingStore offsetBackingStore = new KafkaOffsetBackingStore();
+            offsetBackingStore.configure(distributedConfig);
+            Worker worker = new Worker(workerId, time, plugins, distributedConfig, offsetBackingStore, CLIENT_CONFIG_OVERRIDE_POLICY);
+            WorkerConfigTransformer configTransformer = worker.configTransformer();
+            Converter internalValueConverter = worker.getInternalValueConverter();
+            StatusBackingStore statusBackingStore = new KafkaStatusBackingStore(time, internalValueConverter);
+            statusBackingStore.configure(distributedConfig);
+            ConfigBackingStore configBackingStore = new KafkaConfigBackingStore(
+                    internalValueConverter,
+                    distributedConfig,
+                    configTransformer);
+            Herder herder = new DistributedHerder(distributedConfig, time, worker,
+                    kafkaClusterId, statusBackingStore, configBackingStore,
+                    advertisedUrl, CLIENT_CONFIG_OVERRIDE_POLICY);
+            herders.put(sourceAndTarget, herder);
+        }
     }
 
     private class ShutdownHook extends Thread {

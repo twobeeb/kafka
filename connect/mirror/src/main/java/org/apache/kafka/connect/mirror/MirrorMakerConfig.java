@@ -244,7 +244,7 @@ public class MirrorMakerConfig extends AbstractConfig {
             .withClientSslSupport()
             .withClientSaslSupport();
 
-    private Map<String, String> stringsWithPrefixStripped(String prefix) {
+    Map<String, String> stringsWithPrefixStripped(String prefix) {
         return originalsStrings().entrySet().stream()
             .filter(x -> x.getKey().startsWith(prefix))
             .collect(Collectors.toMap(x -> x.getKey().substring(prefix.length()), x -> x.getValue()));
